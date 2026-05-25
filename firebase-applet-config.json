@@ -1,10 +1,10 @@
 {
-  "projectId": "thinking-ticket-x8gvj",
-  "appId": "1:956794805400:web:6c4a61de950eb00e1b84ed",
-  "apiKey": "AIzaSyBm8Q5Y1qM1TdYsTr8-IRWF0MLrmbQFRRA",
-  "authDomain": "thinking-ticket-x8gvj.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-bb156f5e-a690-4e42-928c-ed06ee37e046",
-  "storageBucket": "thinking-ticket-x8gvj.firebasestorage.app",
-  "messagingSenderId": "956794805400",
-  "measurementId": ""
+  "projectId": "timelow-e0a75",
+  "appId": "1:492373715827:web:7e6e7a758a2a0263d77306",
+  "apiKey": "AIzaSyD7YjAEN81YelXD33q4bAkJQMUJwWaweFE",
+  "authDomain": "timelow-e0a75.firebaseapp.com",
+  "firestoreDatabaseId": "https://timelow-e0a75-default-rtdb.asia-southeast1.firebasedatabase.app/",
+  "storageBucket": "timelow-e0a75.firebasestorage.app",
+  "messagingSenderId": "492373715827",
+  "measurementId": "G-X3SXKKVVMC"
 }
