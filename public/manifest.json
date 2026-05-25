@@ -1,0 +1,41 @@
+{
+  "name": "Timeflow - Quản Lý Thời Gian & Tập Trung",
+  "short_name": "Timeflow",
+  "description": "Ứng dụng quản lý thời gian, thói quen và đồng hồ tập trung Pomodoro thông minh hỗ trợ bởi AI.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c101d",
+  "theme_color": "#0c101d",
+  "orientation": "portrait",
+  "categories": ["productivity", "utilities"],
+  "lang": "vi",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "prefer_related_applications": false
+}

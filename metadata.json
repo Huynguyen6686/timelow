@@ -1,0 +1,6 @@
+{
+  "name": "Timeflow",
+  "description": "Ứng dụng quản lý thời gian, thói quen, công việc hàng ngày và đồng hồ tập trung Pomodoro thông minh hỗ trợ bởi AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

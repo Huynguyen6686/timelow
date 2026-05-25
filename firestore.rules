@@ -1,0 +1,104 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net
+    match /{document=**} { 
+      allow read, write: if false; 
+    }
+
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Validation definitions
+    function isValidTask(data) {
+      return data.keys().hasAll(['title', 'priority', 'status', 'createdAt'])
+        && (data.keys().size() == 4 || data.keys().hasAny(['description', 'deadline', 'estimatedTime', 'tags']))
+        && data.title is string && data.title.size() <= 200
+        && (data.get('description', '') is string && data.get('description', '').size() <= 1000)
+        && data.priority in ["Low", "Medium", "High", "Critical"]
+        && data.status in ["Todo", "InProgress", "Completed"]
+        && (data.get('deadline', null) == null || data.deadline is number)
+        && (data.get('estimatedTime', null) == null || data.estimatedTime is number)
+        && (data.get('tags', []) is list && data.get('tags', []).size() <= 20)
+        && data.createdAt is number;
+    }
+
+    function isValidHabit(data) {
+      return data.keys().hasAll(['title', 'frequency', 'streak', 'completedDates', 'createdAt'])
+        && data.title is string && data.title.size() <= 100
+        && data.frequency in ["Daily", "Weekly"]
+        && data.streak is number
+        && data.completedDates is list && data.completedDates.size() <= 1000
+        && data.createdAt is number;
+    }
+
+    function isValidGoal(data) {
+      return data.keys().hasAll(['title', 'progress', 'createdAt'])
+        && data.title is string && data.title.size() <= 100
+        && (data.get('description', '') is string && data.get('description', '').size() <= 1000)
+        && data.progress is number
+        && (data.get('targetDate', null) == null || data.targetDate is number)
+        && data.createdAt is number;
+    }
+
+    function isValidNote(data) {
+      return data.keys().hasAll(['title', 'content', 'createdAt', 'updatedAt'])
+        && data.title is string && data.title.size() <= 100
+        && data.content is string && data.content.size() <= 5000
+        && data.createdAt is number
+        && data.updatedAt is number;
+    }
+
+    function isValidAnalytics(data) {
+      return data.keys().hasAll(['focusTimeMinutes'])
+        && data.focusTimeMinutes is number;
+    }
+
+
+    match /users/{userId} {
+      match /tasks/{taskId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(taskId) && isValidTask(incoming());
+        allow update: if isOwner(userId) && isValidId(taskId) && isValidTask(incoming()) 
+          && incoming().createdAt == existing().createdAt;
+        allow delete: if isOwner(userId) && isValidId(taskId);
+      }
+
+      match /habits/{habitId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(habitId) && isValidHabit(incoming());
+        allow update: if isOwner(userId) && isValidId(habitId) && isValidHabit(incoming())
+          && incoming().createdAt == existing().createdAt;
+        allow delete: if isOwner(userId) && isValidId(habitId);
+      }
+
+      match /goals/{goalId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(goalId) && isValidGoal(incoming());
+        allow update: if isOwner(userId) && isValidId(goalId) && isValidGoal(incoming())
+          && incoming().createdAt == existing().createdAt;
+        allow delete: if isOwner(userId) && isValidId(goalId);
+      }
+
+      match /notes/{noteId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(noteId) && isValidNote(incoming());
+        allow update: if isOwner(userId) && isValidId(noteId) && isValidNote(incoming())
+          && incoming().createdAt == existing().createdAt;
+        allow delete: if isOwner(userId) && isValidId(noteId);
+      }
+
+      match /analytics/main {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidAnalytics(incoming());
+        allow update: if isOwner(userId) && isValidAnalytics(incoming());
+      }
+    }
+  }
+}

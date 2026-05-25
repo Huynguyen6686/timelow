@@ -1,0 +1,99 @@
+{
+  "entities": {
+    "Task": {
+      "title": "Task",
+      "description": "A user's task",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "priority": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] },
+        "status": { "type": "string", "enum": ["Todo", "InProgress", "Completed"] },
+        "deadline": { "type": "number", "nullable": true },
+        "estimatedTime": { "type": "number", "nullable": true },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "title", "priority", "status", "createdAt"]
+    },
+    "Habit": {
+      "title": "Habit",
+      "description": "A user's habit",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 100 },
+        "frequency": { "type": "string", "enum": ["Daily", "Weekly"] },
+        "streak": { "type": "number" },
+        "completedDates": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "title", "frequency", "streak", "completedDates", "createdAt"]
+    },
+    "Goal": {
+      "title": "Goal",
+      "description": "A user's goal",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "progress": { "type": "number" },
+        "targetDate": { "type": "number", "nullable": true },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "title", "progress", "createdAt"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "A user's note",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 100 },
+        "content": { "type": "string", "maxLength": 5000 },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["userId", "title", "content", "createdAt", "updatedAt"]
+    },
+    "Analytics": {
+      "title": "Analytics",
+      "description": "User analytics tracking like focus time",
+      "type": "object",
+      "properties": {
+        "focusTimeMinutes": { "type": "number" }
+      },
+      "required": ["focusTimeMinutes"]
+    }
+  },
+  "firestore": {
+    "users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "Tasks created by a user"
+    },
+    "users/{userId}/habits/{habitId}": {
+      "schema": { "$ref": "#/entities/Habit" },
+      "description": "Habits created by a user"
+    },
+    "users/{userId}/goals/{goalId}": {
+      "schema": { "$ref": "#/entities/Goal" },
+      "description": "Goals created by a user"
+    },
+    "users/{userId}/notes/{noteId}": {
+      "schema": { "$ref": "#/entities/Note" },
+      "description": "Notes created by a user"
+    },
+    "users/{userId}/analytics/main": {
+      "schema": { "$ref": "#/entities/Analytics" },
+      "description": "Analytics tracking for a user"
+    }
+  }
+}

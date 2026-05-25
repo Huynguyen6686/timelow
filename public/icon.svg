@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bg-grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0c101d" />
+    </radialGradient>
+    
+    <!-- Neon Emerald Glow -->
+    <linearGradient id="emerald-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+
+    <!-- Glowing Amber Time Arc -->
+    <linearGradient id="amber-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="70%" stop-color="#f59e0b" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#fbbf24" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Drop Shadow and Glow Filters -->
+    <filter id="glow-eff" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Outer Rounded Square (Squircle) for Android / Apple Adaptive Masks -->
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#bg-grad)" stroke="#1e293b" stroke-width="4" />
+
+  <!-- Time Flow Arc (Rotated clockwise) -->
+  <circle cx="256" cy="256" r="160" fill="none" stroke="url(#amber-grad)" stroke-width="24" stroke-linecap="round" stroke-dasharray="750" stroke-dashoffset="180" transform="rotate(-30 256 256)" filter="url(#glow-eff)" />
+
+  <!-- Outer Ring Small Accent Beads -->
+  <circle cx="256" cy="74" r="8" fill="#fbbf24" filter="url(#glow-eff)" />
+  <circle cx="256" cy="438" r="8" fill="#fbbf24" opacity="0.4" />
+  <circle cx="74" cy="256" r="8" fill="#f59e0b" opacity="0.3" />
+  <circle cx="438" cy="256" r="8" fill="#fbbf24" opacity="0.7" filter="url(#glow-eff)" />
+
+  <!-- Glowing Central Flame / Lotus / Focus Drop -->
+  <g transform="translate(192, 172) scale(1.6)" filter="url(#glow-eff)">
+    <!-- Behind Aura -->
+    <path d="M40,80 C15,80 0,60 0,40 C0,15 40,0 40,0 C40,0 80,15 80,40 C80,60 65,80 40,80 Z" fill="#10b981" opacity="0.15" transform="translate(0, 0)" />
+    
+    <!-- Primary Flame Core -->
+    <path d="M40,76 C20,76 8,58 8,40 C8,22 40,4 40,4 C40,4 72,22 72,40 C72,58 60,76 40,76 Z" fill="url(#emerald-grad)" />
+    
+    <!-- Light Highlight Curve inside -->
+    <path d="M40,68 C28,68 20,54 20,40 C20,29 40,16 40,16 C40,16 60,29 60,40" fill="none" stroke="#a7f3d0" stroke-width="3" stroke-linecap="round" opacity="0.4" />
+    
+    <!-- Rising Sparkle Dot -->
+    <circle cx="40" cy="28" r="5" fill="#ffffff" filter="url(#glow-eff)" />
+  </g>
+</svg>

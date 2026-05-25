@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="vi" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Timeflow - Quản Lý Thời Gian &amp; Tập Trung</title>
+    
+    <!-- PWA Manifest & App Icons -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icon.svg" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icon.svg" />
+    
+    <!-- SEO & Description -->
+    <meta name="description" content="Ứng dụng quản lý thời gian, thói quen và Pomodoro thông minh hỗ trợ AI." />
+    <meta name="keywords" content="quản lý thời gian, pomodoro, thói quen, năng suất, AI" />
+
+    <!-- iOS / Safari Mobile Standalone Optimization -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Timeflow" />
+    <meta name="theme-color" content="#0c101d" />
+
+    <!-- Android Chrome -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Timeflow" />
+
+    <script>
+      (function() {
+        // Gracefully silent benign dev-server WebSocket and connection noise
+        function shouldSuppress(msg) {
+          const str = String(msg || '').toLowerCase();
+          return str.includes('websocket') || 
+                 str.includes('hmr') || 
+                 str.includes('vite') || 
+                 str.includes('closed without opened') ||
+                 str.includes('failed to fetch') ||
+                 str.includes('networkerror') ||
+                 str.includes('load failed');
+        }
+
+        window.addEventListener('unhandledrejection', function(event) {
+          const reason = event.reason;
+          const msg = reason?.message || String(reason || '');
+          if (shouldSuppress(msg) || (reason?.stack && shouldSuppress(reason.stack))) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }
+        }, true);
+
+        window.addEventListener('error', function(event) {
+          const msg = event.message || '';
+          if (shouldSuppress(msg) || (event.error?.stack && shouldSuppress(event.error.stack))) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }
+        }, true);
+
+        // Safeguard WebSocket error listeners from bubbling to overlay
+        const OrigWS = window.WebSocket;
+        if (OrigWS) {
+          const WrappedWS = function(url, protocols) {
+            const ws = new OrigWS(url, protocols);
+            const origAdd = ws.addEventListener;
+            ws.addEventListener = function(type, listener, options) {
+              if (type === 'error') {
+                const wrappedListener = function(e) {
+                  try {
+                    listener.call(this, e);
+                  } catch (err) {
+                    // Suppress error bubbles
+                  }
+                };
+                return origAdd.call(this, type, wrappedListener, options);
+              }
+              return origAdd.call(this, type, listener, options);
+            };
+            return ws;
+          };
+          WrappedWS.prototype = OrigWS.prototype;
+          for (const key in OrigWS) {
+            if (Object.prototype.hasOwnProperty.call(OrigWS, key)) {
+              WrappedWS[key] = OrigWS[key];
+            }
+          }
+          window.WebSocket = WrappedWS;
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
