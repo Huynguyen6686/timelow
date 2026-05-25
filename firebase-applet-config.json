@@ -3,7 +3,7 @@
   "appId": "1:492373715827:web:7e6e7a758a2a0263d77306",
   "apiKey": "AIzaSyD7YjAEN81YelXD33q4bAkJQMUJwWaweFE",
   "authDomain": "timelow-e0a75.firebaseapp.com",
-  "firestoreDatabaseId": "https://timelow-e0a75-default-rtdb.asia-southeast1.firebasedatabase.app/",
+  "firestoreDatabaseId": "(default)",
   "storageBucket": "timelow-e0a75.firebasestorage.app",
   "messagingSenderId": "492373715827",
   "measurementId": "G-X3SXKKVVMC"
