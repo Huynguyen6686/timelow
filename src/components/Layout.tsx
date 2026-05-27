@@ -138,8 +138,8 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-black sm:flex sm:items-center sm:justify-center p-0 sm:p-4 font-sans selection:bg-primary/30">
-      <div className="w-full h-screen sm:h-[850px] bg-background text-foreground max-w-[400px] mx-auto sm:border-[12px] sm:border-gray-900 sm:rounded-[3rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden relative flex flex-col">
+    <div className="min-h-[100dvh] bg-black sm:flex sm:items-center sm:justify-center p-0 sm:p-3 font-sans selection:bg-primary/30 overflow-auto">
+      <div className="w-full h-[100dvh] sm:h-[min(850px,calc(100dvh-24px))] bg-background text-foreground max-w-[400px] mx-auto sm:border-[10px] sm:border-gray-900 sm:rounded-[3rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden relative flex flex-col">
         <header className="flex items-center justify-between p-4 border-b border-white/5 bg-background/80 backdrop-blur-xl z-40 sticky top-0 shadow-[0_4px_30px_rgba(0,0,0,0.2)]">
           <div className="flex items-center gap-3">
             <Avatar className="w-10 h-10 border-2 border-primary/30 cursor-pointer shadow-[0_0_15px_rgba(52,211,153,0.2)]" onClick={logout} title="Đăng xuất">
@@ -368,7 +368,7 @@ export default function Layout() {
             </Dialog>
           </div>
         </header>
-        <main className="pt-6 pb-[100px] md:p-6 flex-1 overflow-x-hidden overflow-y-auto hide-scrollbar bg-gradient-to-b from-background via-background to-background/50 relative flex flex-col">
+        <main className="pt-6 pb-[120px] md:p-6 md:pb-[120px] flex-1 min-h-0 overflow-x-hidden overflow-y-auto hide-scrollbar bg-gradient-to-b from-background via-background to-background/50 relative flex flex-col">
           <div className="px-4 flex-1">
             <Outlet />
           </div>

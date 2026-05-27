@@ -147,6 +147,26 @@ function writeStoredArray<T>(key: string, value: T[]) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+async function restoreCollectionBackup<T extends { id: string }>(
+  uid: string,
+  collectionName: string,
+  items: T[],
+  setSyncStatus: (status: 'idle' | 'syncing' | 'synced' | 'error') => void,
+) {
+  if (items.length === 0) return;
+
+  try {
+    setSyncStatus('syncing');
+    await Promise.all(
+      items.map((item) => setDoc(doc(db, `users/${uid}/${collectionName}`, item.id), item, { merge: true }))
+    );
+    setSyncStatus('synced');
+  } catch (err) {
+    setSyncStatus('error');
+    handleFirestoreError(err, OperationType.WRITE, `users/${uid}/${collectionName}`);
+  }
+}
+
 function readStoredNumber(key: string) {
   const raw = localStorage.getItem(key);
   if (!raw) return 0;
@@ -383,7 +403,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     unsubs.push(
       onSnapshot(collection(db, `users/${user.uid}/tasks`), (snapshot) => {
         if (snapshot.empty) {
-          setTasks(readStoredArray<Task>(taskBackupKey));
+          const backupTasks = readStoredArray<Task>(taskBackupKey);
+          setTasks(backupTasks);
+          restoreCollectionBackup(user.uid, 'tasks', backupTasks, setSyncStatus);
           return;
         }
         const nextTasks = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Task));
@@ -395,7 +417,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     unsubs.push(
       onSnapshot(collection(db, `users/${user.uid}/habits`), (snapshot) => {
         if (snapshot.empty) {
-          setHabits(readStoredArray<Habit>(habitBackupKey));
+          const backupHabits = readStoredArray<Habit>(habitBackupKey);
+          setHabits(backupHabits);
+          restoreCollectionBackup(user.uid, 'habits', backupHabits, setSyncStatus);
           return;
         }
         const nextHabits = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Habit));
@@ -407,7 +431,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     unsubs.push(
       onSnapshot(collection(db, `users/${user.uid}/goals`), (snapshot) => {
         if (snapshot.empty) {
-          setGoals(readStoredArray<Goal>(goalBackupKey));
+          const backupGoals = readStoredArray<Goal>(goalBackupKey);
+          setGoals(backupGoals);
+          restoreCollectionBackup(user.uid, 'goals', backupGoals, setSyncStatus);
           return;
         }
         const nextGoals = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Goal));
@@ -419,7 +445,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     unsubs.push(
       onSnapshot(collection(db, `users/${user.uid}/notes`), (snapshot) => {
         if (snapshot.empty) {
-          setNotes(readStoredArray<Note>(noteBackupKey));
+          const backupNotes = readStoredArray<Note>(noteBackupKey);
+          setNotes(backupNotes);
+          restoreCollectionBackup(user.uid, 'notes', backupNotes, setSyncStatus);
           return;
         }
         const nextNotes = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Note));

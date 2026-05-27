@@ -18,7 +18,8 @@ service cloud.firestore {
     // Validation definitions
     function isValidTask(data) {
       return data.keys().hasAll(['title', 'priority', 'status', 'createdAt'])
-        && (data.keys().size() == 4 || data.keys().hasAny(['description', 'deadline', 'estimatedTime', 'tags']))
+        && data.keys().hasOnly(['id', 'title', 'description', 'priority', 'status', 'deadline', 'estimatedTime', 'tags', 'reminderTime', 'createdAt'])
+        && (!('id' in data) || isValidId(data.id))
         && data.title is string && data.title.size() <= 200
         && (data.get('description', '') is string && data.get('description', '').size() <= 1000)
         && data.priority in ["Low", "Medium", "High", "Critical"]
@@ -26,11 +27,14 @@ service cloud.firestore {
         && (data.get('deadline', null) == null || data.deadline is number)
         && (data.get('estimatedTime', null) == null || data.estimatedTime is number)
         && (data.get('tags', []) is list && data.get('tags', []).size() <= 20)
+        && (data.get('reminderTime', null) == null || data.reminderTime is number)
         && data.createdAt is number;
     }
 
     function isValidHabit(data) {
       return data.keys().hasAll(['title', 'frequency', 'streak', 'completedDates', 'createdAt'])
+        && data.keys().hasOnly(['id', 'title', 'frequency', 'streak', 'completedDates', 'createdAt'])
+        && (!('id' in data) || isValidId(data.id))
         && data.title is string && data.title.size() <= 100
         && data.frequency in ["Daily", "Weekly"]
         && data.streak is number
