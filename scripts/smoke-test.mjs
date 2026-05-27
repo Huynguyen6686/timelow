@@ -83,7 +83,7 @@ try {
 
   const serviceWorker = await fetchText('/sw.js');
   await assert(serviceWorker.response.status === 200, `Expected /sw.js to return 200, got ${serviceWorker.response.status}`);
-  await assert(serviceWorker.text.includes('timeflow-cache-v2'), 'Expected service worker cache version v2');
+  await assert(serviceWorker.text.includes('timeflow-cache-v3'), 'Expected service worker cache version v3');
   await assert(serviceWorker.text.includes("self.addEventListener('push'"), 'Expected service worker to handle push notifications');
 
   const pushSettings = await fetchText('/api/push/public-key');

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppContext, Task } from '../store/AppContext';
-import { Bell, Clock, Check, X, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Clock, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ToastItem {
@@ -65,7 +65,7 @@ export default function DeadlineToastNotifier() {
   useEffect(() => {
     const checkDeadlines = () => {
       const now = Date.now();
-      const ONE_HOUR = 60 * 60 * 1000;
+      const MISSED_REMINDER_GRACE = 10 * 60 * 1000;
       
       // Keys representing already notified tasks
       const notifiedStorageKey = 'timeflow_notified_deadlines_v1';
@@ -82,15 +82,17 @@ export default function DeadlineToastNotifier() {
       let mapChanged = false;
 
       (tasks || []).forEach((task) => {
-        // Must have non-empty deadline, must not be completed
         if (!task.deadline || task.status === 'Completed') return;
+        const reminderAt = task.reminderTime || task.deadline;
+        if (reminderAt > task.deadline) return;
 
-        const timeDiff = task.deadline - now;
+        const timeUntilDeadline = task.deadline - now;
+        const timeSinceReminder = now - reminderAt;
         
-        // Is upcoming and within 1 hour (60 minutes)
-        if (timeDiff > 0 && timeDiff <= ONE_HOUR) {
-          const minutesRemaining = Math.max(1, Math.round(timeDiff / (60 * 1000)));
-          const uniqueNotifyKey = `${task.id}_${task.deadline}`;
+        // Trigger at the exact reminder time, with a short grace window for browser throttling.
+        if (timeUntilDeadline >= 0 && timeSinceReminder >= 0 && timeSinceReminder <= MISSED_REMINDER_GRACE) {
+          const minutesRemaining = Math.max(0, Math.round(timeUntilDeadline / (60 * 1000)));
+          const uniqueNotifyKey = `${task.id}_${reminderAt}_${task.deadline}`;
 
           // If not notified yet, trigger alert!
           if (!notifiedMap[uniqueNotifyKey]) {

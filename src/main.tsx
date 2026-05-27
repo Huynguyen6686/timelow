@@ -46,14 +46,22 @@ createRoot(document.getElementById('root')!).render(
 // Register Progressive Web App (PWA) Service Worker for smartphone compatibility
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
       .then((reg) => {
         console.log('Timeflow Service Worker registered successfully:', reg.scope);
+        reg.update().catch(() => {});
+        window.setInterval(() => {
+          reg.update().catch(() => {});
+        }, 30 * 60 * 1000);
       })
       .catch((err) => {
         console.warn('Timeflow Service Worker registration failed/restricted:', err);
       });
   });
-}
 
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    navigator.serviceWorker.getRegistration().then((reg) => reg?.update().catch(() => {}));
+  });
+}
 

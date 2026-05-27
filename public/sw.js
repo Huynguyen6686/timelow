@@ -1,7 +1,5 @@
-const CACHE_NAME = 'timeflow-cache-v2';
+const CACHE_NAME = 'timeflow-cache-v3';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/icon.svg'
 ];
@@ -18,7 +16,7 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME).then((cache) => {
       // Warm up the cache with essential assets
       return cache.addAll(ASSETS_TO_CACHE);
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
@@ -51,7 +49,17 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
+    request.mode === 'navigate'
+      ? fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match('/index.html').then((cachedResponse) => cachedResponse || caches.match('/')))
+      : caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
         // Return from cache, and asynchronously update cache in background 
         // to maintain fresh files (Stale-While-Revalidate pattern)
@@ -68,12 +76,7 @@ self.addEventListener('fetch', (event) => {
       }
 
       // Fallback to live network fetch
-      return fetch(request).catch(() => {
-        // If everything fails (offline) and they are requesting the main index.html
-        if (request.mode === 'navigate') {
-          return caches.match('/');
-        }
-      });
+      return fetch(request);
     })
   );
 });

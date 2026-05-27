@@ -38,6 +38,7 @@ export default function UpdateNotification() {
     navigator.serviceWorker.getRegistration().then((reg) => {
       if (reg) {
         handleUpdate(reg);
+        reg.update().catch(() => {});
       }
     });
 
