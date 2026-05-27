@@ -18,5 +18,21 @@ export default defineConfig(() => {
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return undefined;
+            if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) return 'firebase';
+            if (id.includes('node_modules/motion')) return 'motion';
+            if (id.includes('node_modules/d3')) return 'd3';
+            if (id.includes('node_modules/@base-ui')) return 'base-ui';
+            if (id.includes('node_modules/lucide-react')) return 'icons';
+            if (id.includes('node_modules/date-fns')) return 'date-fns';
+            return undefined;
+          },
+        },
+      },
+    },
   };
 });

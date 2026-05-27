@@ -49,6 +49,7 @@ export interface Note {
 interface AppContextState {
   user: any;
   loading: boolean;
+  syncStatus: 'idle' | 'syncing' | 'synced' | 'error';
   tasks: Task[];
   habits: Habit[];
   goals: Goal[];
@@ -82,6 +83,7 @@ interface AppContextState {
 const defaultState: AppContextState = {
   user: null,
   loading: true,
+  syncStatus: 'idle',
   tasks: [],
   habits: [],
   goals: [],
@@ -131,6 +133,7 @@ const getDefaultNotes = (): Note[] => [];
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -398,8 +401,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
+      setSyncStatus('syncing');
       await setDoc(doc(db, `users/${user.uid}/tasks`, id), newTask);
-    } catch(err) { handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}/tasks/${id}`); }
+      setSyncStatus('synced');
+    } catch(err) { setSyncStatus('error'); handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}/tasks/${id}`); }
   };
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
@@ -414,8 +419,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
+      setSyncStatus('syncing');
       await updateDoc(doc(db, `users/${user.uid}/tasks`, id), updates);
-    } catch(err) { handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/tasks/${id}`); }
+      setSyncStatus('synced');
+    } catch(err) { setSyncStatus('error'); handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/tasks/${id}`); }
   };
 
   const deleteTask = async (id: string) => {
@@ -430,8 +437,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
+      setSyncStatus('syncing');
       await deleteDoc(doc(db, `users/${user.uid}/tasks`, id));
-    } catch(err) { handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/tasks/${id}`); }
+      setSyncStatus('synced');
+    } catch(err) { setSyncStatus('error'); handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/tasks/${id}`); }
   };
 
   const addHabit = async (habit: Omit<Habit, 'id' | 'createdAt' | 'streak' | 'completedDates'>) => {
@@ -454,8 +463,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
+      setSyncStatus('syncing');
       await setDoc(doc(db, `users/${user.uid}/habits`, id), newHabit);
-    } catch(err) { handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}/habits/${id}`); }
+      setSyncStatus('synced');
+    } catch(err) { setSyncStatus('error'); handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}/habits/${id}`); }
   };
 
   const deleteHabit = async (id: string) => {
@@ -470,8 +481,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
+      setSyncStatus('syncing');
       await deleteDoc(doc(db, `users/${user.uid}/habits`, id));
-    } catch(err) { handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/habits/${id}`); }
+      setSyncStatus('synced');
+    } catch(err) { setSyncStatus('error'); handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/habits/${id}`); }
   };
 
   const calculateStreak = (dates: string[]) => {
@@ -518,11 +531,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
     
     try {
+      setSyncStatus('syncing');
       await updateDoc(doc(db, `users/${user.uid}/habits`, id), {
         completedDates: newDates,
         streak: newStreak
       });
-    } catch(err) { handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/habits/${id}`); }
+      setSyncStatus('synced');
+    } catch(err) { setSyncStatus('error'); handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/habits/${id}`); }
   };
 
   const removeHabitCheckIn = async (id: string, dateStr: string) => {
@@ -543,11 +558,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
     
     try {
+      setSyncStatus('syncing');
       await updateDoc(doc(db, `users/${user.uid}/habits`, id), {
         completedDates: newDates,
         streak: newStreak
       });
-    } catch(err) { handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/habits/${id}`); }
+      setSyncStatus('synced');
+    } catch(err) { setSyncStatus('error'); handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/habits/${id}`); }
   };
 
   const addGoal = async (goal: Omit<Goal, 'id' | 'createdAt'>) => {
@@ -565,8 +582,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
+      setSyncStatus('syncing');
       await setDoc(doc(db, `users/${user.uid}/goals`, id), newGoal);
-    } catch(err) { handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}/goals/${id}`); }
+      setSyncStatus('synced');
+    } catch(err) { setSyncStatus('error'); handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}/goals/${id}`); }
   };
 
   const deleteGoal = async (id: string) => {
@@ -578,8 +597,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
+      setSyncStatus('syncing');
       await deleteDoc(doc(db, `users/${user.uid}/goals`, id));
-    } catch(err) { handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/goals/${id}`); }
+      setSyncStatus('synced');
+    } catch(err) { setSyncStatus('error'); handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/goals/${id}`); }
   };
 
   const updateGoalProgress = async (id: string, progress: number) => {
@@ -591,8 +612,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
+      setSyncStatus('syncing');
       await updateDoc(doc(db, `users/${user.uid}/goals`, id), { progress });
-    } catch(err) { handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/goals/${id}`); }
+      setSyncStatus('synced');
+    } catch(err) { setSyncStatus('error'); handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/goals/${id}`); }
   };
 
   const addFocusTime = async (minutes: number) => {
@@ -604,10 +627,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
+      setSyncStatus('syncing');
       await setDoc(doc(db, `users/${user.uid}/analytics/main`), {
         focusTimeMinutes: newFocusTime
       }, { merge: true });
-    } catch(err) { handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/analytics/main`); }
+      setSyncStatus('synced');
+    } catch(err) { setSyncStatus('error'); handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/analytics/main`); }
   };
   
   const addNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -626,8 +651,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
+      setSyncStatus('syncing');
       await setDoc(doc(db, `users/${user.uid}/notes`, id), newNote);
-    } catch(err) { handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}/notes/${id}`); }
+      setSyncStatus('synced');
+    } catch(err) { setSyncStatus('error'); handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}/notes/${id}`); }
   };
 
   const updateNote = async (id: string, updates: Partial<Note>) => {
@@ -639,11 +666,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
+      setSyncStatus('syncing');
       await updateDoc(doc(db, `users/${user.uid}/notes`, id), {
         ...updates,
         updatedAt: Date.now()
       });
-    } catch(err) { handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/notes/${id}`); }
+      setSyncStatus('synced');
+    } catch(err) { setSyncStatus('error'); handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/notes/${id}`); }
   };
 
   const deleteNote = async (id: string) => {
@@ -655,13 +684,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
+      setSyncStatus('syncing');
       await deleteDoc(doc(db, `users/${user.uid}/notes`, id));
-    } catch(err) { handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/notes/${id}`); }
+      setSyncStatus('synced');
+    } catch(err) { setSyncStatus('error'); handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/notes/${id}`); }
   };
 
   return (
     <AppContext.Provider value={{
-      user, loading,
+      user, loading, syncStatus,
       tasks, habits, goals, notes, focusTimeMinutes, activeTask, setActiveTask, language, setLanguage, theme, setTheme,
       login, loginAsGuest, logout,
       addTask, updateTask, deleteTask,

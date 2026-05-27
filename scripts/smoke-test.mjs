@@ -84,6 +84,11 @@ try {
   const serviceWorker = await fetchText('/sw.js');
   await assert(serviceWorker.response.status === 200, `Expected /sw.js to return 200, got ${serviceWorker.response.status}`);
   await assert(serviceWorker.text.includes('timeflow-cache-v2'), 'Expected service worker cache version v2');
+  await assert(serviceWorker.text.includes("self.addEventListener('push'"), 'Expected service worker to handle push notifications');
+
+  const pushSettings = await fetchText('/api/push/public-key');
+  await assert(pushSettings.response.status === 200, `Expected push settings to return 200, got ${pushSettings.response.status}`);
+  await assert(pushSettings.text.includes('"enabled"'), 'Expected push settings to include enabled flag');
 
   const badQuickAdd = await fetchText('/api/ai/quickadd', {
     method: 'POST',
@@ -91,6 +96,13 @@ try {
     body: JSON.stringify({}),
   });
   await assert(badQuickAdd.response.status === 400, `Expected bad quickadd request to return 400, got ${badQuickAdd.response.status}`);
+
+  const badPushSubscribe = await fetchText('/api/push/subscribe', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  await assert(badPushSubscribe.response.status === 400, `Expected bad push subscribe request to return 400, got ${badPushSubscribe.response.status}`);
 
   console.log('Smoke test passed');
 } catch (error) {

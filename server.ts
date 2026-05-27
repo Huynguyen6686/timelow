@@ -3,11 +3,69 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import webPush, { PushSubscription } from "web-push";
 
 dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
+
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webPush.setVapidDetails(
+    process.env.VAPID_SUBJECT || "mailto:admin@timeflow.local",
+    VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY,
+  );
+}
+
+type PushReminder = {
+  taskId: string;
+  title: string;
+  body?: string;
+  deadline: number;
+  reminderTime: number;
+};
+
+const pushSubscriptions = new Map<string, PushSubscription>();
+const scheduledReminderTimers = new Map<string, NodeJS.Timeout>();
+
+function schedulePushReminder(userId: string, reminder: PushReminder) {
+  const timerKey = `${userId}:${reminder.taskId}`;
+  const previousTimer = scheduledReminderTimers.get(timerKey);
+  if (previousTimer) {
+    clearTimeout(previousTimer);
+    scheduledReminderTimers.delete(timerKey);
+  }
+
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
+  if (reminder.reminderTime <= Date.now()) return;
+
+  const delayMs = Math.min(reminder.reminderTime - Date.now(), 2147483647);
+  const timer = setTimeout(async () => {
+    scheduledReminderTimers.delete(timerKey);
+    const subscription = pushSubscriptions.get(userId);
+    if (!subscription) return;
+
+    try {
+      await webPush.sendNotification(subscription, JSON.stringify({
+        title: "Timeflow nhắc hạn",
+        body: reminder.body || `Sắp đến hạn: ${reminder.title}`,
+        tag: `deadline-${reminder.taskId}-${reminder.deadline}`,
+        url: "/tasks",
+        taskId: reminder.taskId,
+      }));
+    } catch (error: any) {
+      if (error?.statusCode === 404 || error?.statusCode === 410) {
+        pushSubscriptions.delete(userId);
+      }
+      console.warn("Push reminder failed", error?.message || error);
+    }
+  }, delayMs);
+
+  scheduledReminderTimers.set(timerKey, timer);
+}
 
 // Initialize GoogleGenAI client (lazy server-side initialization to avoid crashing on launch if API key is not set yet)
 let aiClient: GoogleGenAI | null = null;
@@ -33,6 +91,49 @@ function getAI(): GoogleGenAI {
 app.use(express.json());
 
 // API endpoints
+
+app.get("/api/push/public-key", (_req, res) => {
+  res.json({
+    enabled: Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY),
+    publicKey: VAPID_PUBLIC_KEY,
+  });
+});
+
+app.post("/api/push/subscribe", (req, res) => {
+  const { userId, subscription } = req.body || {};
+  if (!userId || !subscription?.endpoint) {
+    return res.status(400).json({ error: "userId and subscription are required" });
+  }
+
+  pushSubscriptions.set(String(userId), subscription);
+  res.json({ ok: true });
+});
+
+app.post("/api/push/schedule", (req, res) => {
+  const { userId, reminders } = req.body || {};
+  if (!userId || !Array.isArray(reminders)) {
+    return res.status(400).json({ error: "userId and reminders are required" });
+  }
+
+  for (const [key, timer] of scheduledReminderTimers.entries()) {
+    if (key.startsWith(`${userId}:`)) {
+      clearTimeout(timer);
+      scheduledReminderTimers.delete(key);
+    }
+  }
+
+  reminders
+    .filter((reminder: PushReminder) => (
+      reminder &&
+      typeof reminder.taskId === "string" &&
+      typeof reminder.title === "string" &&
+      typeof reminder.deadline === "number" &&
+      typeof reminder.reminderTime === "number"
+    ))
+    .forEach((reminder: PushReminder) => schedulePushReminder(String(userId), reminder));
+
+  res.json({ ok: true, scheduled: scheduledReminderTimers.size });
+});
 
 // 1. AI Productivity Coach Daily Strategy feedback
 app.post("/api/ai/coach", async (req, res) => {

@@ -2,19 +2,21 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { BottomNav } from './BottomNav';
 import { useAppContext } from '../store/AppContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, Calendar, Play, Sun, Moon, Bell, AlertTriangle, AlertCircle, Volume2, Clock, Smartphone, Share2, Info } from 'lucide-react';
+import { LogOut, Calendar, Play, Sun, Moon, Bell, AlertTriangle, AlertCircle, Volume2, Clock, Smartphone, Share2, Info, Cloud, CloudOff, Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { GlowEffect } from './GlowEffect';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useState } from 'react';
-import AIAssistant from './AIAssistant';
-import DeadlineToastNotifier from './DeadlineToastNotifier';
-import StreakCelebrationToast from './StreakCelebrationToast';
+import { lazy, Suspense, useState } from 'react';
+import DeadlinePushManager from './DeadlinePushManager';
+
+const AIAssistant = lazy(() => import('./AIAssistant'));
+const DeadlineToastNotifier = lazy(() => import('./DeadlineToastNotifier'));
+const StreakCelebrationToast = lazy(() => import('./StreakCelebrationToast'));
 
 export default function Layout() {
-  const { user, loading, login, loginAsGuest, logout, theme, setTheme, tasks } = useAppContext();
+  const { user, loading, login, loginAsGuest, logout, theme, setTheme, tasks, syncStatus } = useAppContext();
   const location = useLocation();
   const [isNotifyOpen, setIsNotifyOpen] = useState(false);
   const [isAppInstallOpen, setIsAppInstallOpen] = useState(false);
@@ -61,6 +63,14 @@ export default function Layout() {
   }
 
   const isDashboard = location.pathname === '/';
+  const syncDetails = syncStatus === 'syncing'
+    ? { label: 'Đang lưu', icon: Loader2, className: 'text-amber-400 bg-amber-500/10 border-amber-500/20 animate-pulse' }
+    : syncStatus === 'error'
+      ? { label: 'Lỗi lưu', icon: CloudOff, className: 'text-rose-400 bg-rose-500/10 border-rose-500/20' }
+      : syncStatus === 'synced'
+      ? { label: 'Đã lưu', icon: Cloud, className: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' }
+      : null;
+  const SyncIcon = syncDetails?.icon;
 
   // Calculate upcoming/overdue tasks with deadlines for notification badge
   const nowTime = Date.now();
@@ -141,6 +151,12 @@ export default function Layout() {
               {isDashboard && (
                 <span className="text-[10px] text-muted-foreground capitalize mt-1 font-medium drop-shadow-sm">
                   {format(new Date(), 'EEEE, d MMMM', { locale: vi })}
+                </span>
+              )}
+              {syncDetails && SyncIcon && (
+                <span className={`mt-1 inline-flex w-fit items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider ${syncDetails.className}`}>
+                  <SyncIcon className="h-3 w-3" />
+                  {syncDetails.label}
                 </span>
               )}
             </div>
@@ -284,6 +300,8 @@ export default function Layout() {
                     Danh sách nhiệm vụ có hạn chót gấp hoặc đã quá hạn trong vòng 36 tiếng qua:
                   </p>
 
+                  <DeadlinePushManager />
+
                   <div className="max-h-[280px] overflow-y-auto space-y-2.5 pr-1 py-1 scrollbar-thin">
                     {deadlineTasks.length > 0 ? (
                       deadlineTasks.map(t => {
@@ -356,9 +374,11 @@ export default function Layout() {
           </div>
         </main>
         <div id="floating-actions-container" className="absolute bottom-[110px] right-6 z-[45]"></div>
-        <AIAssistant />
-        <DeadlineToastNotifier />
-        <StreakCelebrationToast />
+        <Suspense fallback={null}>
+          <AIAssistant />
+          <DeadlineToastNotifier />
+          <StreakCelebrationToast />
+        </Suspense>
         <BottomNav />
       </div>
     </div>
