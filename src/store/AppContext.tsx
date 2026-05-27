@@ -130,6 +130,30 @@ const getDefaultGoals = (): Goal[] => [];
 
 const getDefaultNotes = (): Note[] => [];
 
+const getUserStorageKey = (uid: string, collectionName: string) => `timeflow_user_${uid}_${collectionName}`;
+
+function readStoredArray<T>(key: string): T[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_error) {
+    return [];
+  }
+}
+
+function writeStoredArray<T>(key: string, value: T[]) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function readStoredNumber(key: string) {
+  const raw = localStorage.getItem(key);
+  if (!raw) return 0;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -344,38 +368,75 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const unsubs: Array<() => void> = [];
+    const taskBackupKey = getUserStorageKey(user.uid, 'tasks');
+    const habitBackupKey = getUserStorageKey(user.uid, 'habits');
+    const goalBackupKey = getUserStorageKey(user.uid, 'goals');
+    const noteBackupKey = getUserStorageKey(user.uid, 'notes');
+    const focusBackupKey = getUserStorageKey(user.uid, 'focustime');
+
+    setTasks(readStoredArray<Task>(taskBackupKey));
+    setHabits(readStoredArray<Habit>(habitBackupKey));
+    setGoals(readStoredArray<Goal>(goalBackupKey));
+    setNotes(readStoredArray<Note>(noteBackupKey));
+    setFocusTimeMinutes(readStoredNumber(focusBackupKey));
 
     unsubs.push(
       onSnapshot(collection(db, `users/${user.uid}/tasks`), (snapshot) => {
-        setTasks(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Task)));
+        if (snapshot.empty) {
+          setTasks(readStoredArray<Task>(taskBackupKey));
+          return;
+        }
+        const nextTasks = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Task));
+        setTasks(nextTasks);
+        writeStoredArray(taskBackupKey, nextTasks);
       }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/tasks`))
     );
 
     unsubs.push(
       onSnapshot(collection(db, `users/${user.uid}/habits`), (snapshot) => {
-        setHabits(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Habit)));
+        if (snapshot.empty) {
+          setHabits(readStoredArray<Habit>(habitBackupKey));
+          return;
+        }
+        const nextHabits = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Habit));
+        setHabits(nextHabits);
+        writeStoredArray(habitBackupKey, nextHabits);
       }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/habits`))
     );
 
     unsubs.push(
       onSnapshot(collection(db, `users/${user.uid}/goals`), (snapshot) => {
-        setGoals(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Goal)));
+        if (snapshot.empty) {
+          setGoals(readStoredArray<Goal>(goalBackupKey));
+          return;
+        }
+        const nextGoals = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Goal));
+        setGoals(nextGoals);
+        writeStoredArray(goalBackupKey, nextGoals);
       }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/goals`))
     );
 
     unsubs.push(
       onSnapshot(collection(db, `users/${user.uid}/notes`), (snapshot) => {
-        setNotes(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Note)));
+        if (snapshot.empty) {
+          setNotes(readStoredArray<Note>(noteBackupKey));
+          return;
+        }
+        const nextNotes = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Note));
+        setNotes(nextNotes);
+        writeStoredArray(noteBackupKey, nextNotes);
       }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/notes`))
     );
 
     unsubs.push(
       onSnapshot(doc(db, `users/${user.uid}/analytics/main`), (snapshot) => {
         if (snapshot.exists()) {
-          setFocusTimeMinutes(snapshot.data().focusTimeMinutes || 0);
+          const nextFocus = snapshot.data().focusTimeMinutes || 0;
+          setFocusTimeMinutes(nextFocus);
+          localStorage.setItem(focusBackupKey, String(nextFocus));
         } else {
           setDoc(doc(db, `users/${user.uid}/analytics/main`), { focusTimeMinutes: 0 }, { merge: true });
-          setFocusTimeMinutes(0);
+          setFocusTimeMinutes(readStoredNumber(focusBackupKey));
         }
       }, (err) => handleFirestoreError(err, OperationType.GET, `users/${user.uid}/analytics/main`))
     );
@@ -400,6 +461,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('timeflow_guest_tasks', JSON.stringify(updatedTasks));
       return;
     }
+    const updatedTasks = [...tasks, newTask];
+    setTasks(updatedTasks);
+    writeStoredArray(getUserStorageKey(user.uid, 'tasks'), updatedTasks);
     try {
       setSyncStatus('syncing');
       await setDoc(doc(db, `users/${user.uid}/tasks`, id), newTask);
@@ -418,6 +482,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('timeflow_guest_tasks', JSON.stringify(updatedTasks));
       return;
     }
+    const updatedTasks = tasks.map(t => t.id === id ? { ...t, ...updates } : t);
+    setTasks(updatedTasks);
+    writeStoredArray(getUserStorageKey(user.uid, 'tasks'), updatedTasks);
     try {
       setSyncStatus('syncing');
       await updateDoc(doc(db, `users/${user.uid}/tasks`, id), updates);
@@ -436,6 +503,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('timeflow_guest_tasks', JSON.stringify(updatedTasks));
       return;
     }
+    const updatedTasks = tasks.filter(t => t.id !== id);
+    setTasks(updatedTasks);
+    writeStoredArray(getUserStorageKey(user.uid, 'tasks'), updatedTasks);
     try {
       setSyncStatus('syncing');
       await deleteDoc(doc(db, `users/${user.uid}/tasks`, id));
@@ -462,6 +532,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('timeflow_guest_habits', JSON.stringify(updated));
       return;
     }
+    const updated = [...habits, newHabit];
+    setHabits(updated);
+    writeStoredArray(getUserStorageKey(user.uid, 'habits'), updated);
     try {
       setSyncStatus('syncing');
       await setDoc(doc(db, `users/${user.uid}/habits`, id), newHabit);
@@ -480,6 +553,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('timeflow_guest_habits', JSON.stringify(updated));
       return;
     }
+    const updated = habits.filter(h => h.id !== id);
+    setHabits(updated);
+    writeStoredArray(getUserStorageKey(user.uid, 'habits'), updated);
     try {
       setSyncStatus('syncing');
       await deleteDoc(doc(db, `users/${user.uid}/habits`, id));
@@ -529,6 +605,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('timeflow_guest_habits', JSON.stringify(updated));
       return;
     }
+    const updated = habits.map(habit => habit.id === id ? { ...habit, completedDates: newDates, streak: newStreak } : habit);
+    setHabits(updated);
+    writeStoredArray(getUserStorageKey(user.uid, 'habits'), updated);
     
     try {
       setSyncStatus('syncing');
@@ -556,6 +635,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('timeflow_guest_habits', JSON.stringify(updated));
       return;
     }
+    const updated = habits.map(habit => habit.id === id ? { ...habit, completedDates: newDates, streak: newStreak } : habit);
+    setHabits(updated);
+    writeStoredArray(getUserStorageKey(user.uid, 'habits'), updated);
     
     try {
       setSyncStatus('syncing');
