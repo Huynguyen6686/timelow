@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Initialize GoogleGenAI client (lazy server-side initialization to avoid crashing on launch if API key is not set yet)
 let aiClient: GoogleGenAI | null = null;

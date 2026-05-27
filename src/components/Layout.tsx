@@ -31,7 +31,7 @@ export default function Layout() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 max-w-md mx-auto sm:border-x">
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-background px-6 py-8 max-w-md mx-auto sm:border-x overflow-hidden">
         <GlowEffect glowColor="rgba(52, 211, 153, 0.3)" tiltSpeed={8} glowSize={160} borderRadius="28px" scaleOnHover={true} className="mb-6">
           <div className="w-20 h-20 bg-primary/10 rounded-[28px] shadow-[inset_4px_4px_10px_rgba(0,0,0,0.2),inset_-2px_-2px_5px_rgba(255,255,255,0.05)] border border-primary/20 flex items-center justify-center">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
@@ -40,17 +40,17 @@ export default function Layout() {
             </svg>
           </div>
         </GlowEffect>
-        <h1 className="text-3.5xl font-black tracking-tight mb-2 drop-shadow-md text-foreground bg-clip-text">TimeFlow</h1>
-        <p className="text-center text-muted-foreground mb-8 font-medium text-sm leading-relaxed px-4">Quản lý thời gian, thiết lập thói quen và tối ưu hóa sự tập trung chi tiết 3D.</p>
+        <h1 className="text-4xl font-black tracking-tight mb-2 drop-shadow-md text-foreground bg-clip-text">TimeFlow</h1>
+        <p className="text-center text-muted-foreground mb-8 font-medium text-sm leading-relaxed max-w-[300px]">Quản lý thời gian, thiết lập thói quen và tối ưu hóa sự tập trung chi tiết 3D.</p>
         
-        <div className="w-full space-y-4 px-2">
-          <GlowEffect glowColor="rgba(52, 211, 153, 0.45)" tiltSpeed={4} glowSize={110} borderRadius="16px">
+        <div className="w-full max-w-[300px] space-y-4">
+          <GlowEffect glowColor="rgba(52, 211, 153, 0.45)" tiltSpeed={4} glowSize={110} borderRadius="16px" className="w-full">
             <Button onClick={login} className="w-full text-base py-6 rounded-2xl font-black uppercase tracking-wider bg-gradient-to-b from-primary/90 to-primary text-emerald-950 shadow-[0_10px_20px_rgba(52,211,153,0.3),inset_0_2px_5px_rgba(255,255,255,0.4),inset_0_-2px_5px_rgba(0,0,0,0.2)] border border-primary/50 hover:scale-103 transition-all">
               Đăng nhập bằng Google
             </Button>
           </GlowEffect>
 
-          <GlowEffect glowColor="rgba(255, 255, 255, 0.12)" tiltSpeed={2} glowSize={90} borderRadius="16px">
+          <GlowEffect glowColor="rgba(255, 255, 255, 0.12)" tiltSpeed={2} glowSize={90} borderRadius="16px" className="w-full">
             <Button onClick={loginAsGuest} variant="outline" className="w-full text-base py-6 rounded-2xl font-bold bg-[#1a1e28]/40 border border-white/15 text-muted-foreground hover:text-foreground hover:bg-[#1a1e28]/70 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.5)] hover:scale-102 transition-all">
               <Play className="w-4 h-4 mr-1.5 fill-current" /> Dùng thử chế độ Demo
             </Button>

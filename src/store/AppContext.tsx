@@ -208,20 +208,49 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    let loadingResolved = false;
+    const resolveLoading = () => {
+      if (!loadingResolved) {
+        loadingResolved = true;
+        setLoading(false);
+      }
+    };
+    const applyAuthUser = (u: User | null) => {
       const savedGuest = localStorage.getItem('timeflow_guest_user');
       if (savedGuest) {
         setUser(JSON.parse(savedGuest));
-        setLoading(false);
       } else if (u) {
         setUser(u);
-        setLoading(false);
       } else {
         setUser(null);
-        setLoading(false);
       }
-    });
-    return () => unsubscribe();
+    };
+
+    const timeoutId = window.setTimeout(() => {
+      console.warn('Firebase auth state timed out; continuing with the current session state.');
+      applyAuthUser(auth.currentUser);
+      resolveLoading();
+    }, 5000);
+
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (u) => {
+        window.clearTimeout(timeoutId);
+        applyAuthUser(u);
+        resolveLoading();
+      },
+      (error) => {
+        window.clearTimeout(timeoutId);
+        console.error("Auth state listener failed", error);
+        applyAuthUser(auth.currentUser);
+        resolveLoading();
+      }
+    );
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -312,87 +341,41 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const unsubs: Array<() => void> = [];
-    const isWipedAll = localStorage.getItem(`timeflow_complete_wipe_v10_${user.uid}`);
 
     unsubs.push(
       onSnapshot(collection(db, `users/${user.uid}/tasks`), (snapshot) => {
-        if (!isWipedAll && !snapshot.empty) {
-          snapshot.docs.forEach(async (d) => {
-            try { await deleteDoc(doc(db, `users/${user.uid}/tasks`, d.id)); } catch (err) {}
-          });
-        }
-        if (snapshot.empty || !isWipedAll) {
-          setTasks([]);
-        } else {
-          setTasks(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Task)));
-        }
+        setTasks(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Task)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/tasks`))
     );
 
     unsubs.push(
       onSnapshot(collection(db, `users/${user.uid}/habits`), (snapshot) => {
-        if (!isWipedAll && !snapshot.empty) {
-          snapshot.docs.forEach(async (d) => {
-            try { await deleteDoc(doc(db, `users/${user.uid}/habits`, d.id)); } catch (err) {}
-          });
-        }
-        if (snapshot.empty || !isWipedAll) {
-          setHabits([]);
-        } else {
-          setHabits(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Habit)));
-        }
+        setHabits(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Habit)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/habits`))
     );
 
     unsubs.push(
       onSnapshot(collection(db, `users/${user.uid}/goals`), (snapshot) => {
-        if (!isWipedAll && !snapshot.empty) {
-          snapshot.docs.forEach(async (d) => {
-            try { await deleteDoc(doc(db, `users/${user.uid}/goals`, d.id)); } catch (err) {}
-          });
-        }
-        if (snapshot.empty || !isWipedAll) {
-          setGoals([]);
-        } else {
-          setGoals(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Goal)));
-        }
+        setGoals(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Goal)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/goals`))
     );
 
     unsubs.push(
       onSnapshot(collection(db, `users/${user.uid}/notes`), (snapshot) => {
-        if (!isWipedAll && !snapshot.empty) {
-          snapshot.docs.forEach(async (d) => {
-            try { await deleteDoc(doc(db, `users/${user.uid}/notes`, d.id)); } catch (err) {}
-          });
-        }
-        if (snapshot.empty || !isWipedAll) {
-          setNotes([]);
-        } else {
-          setNotes(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Note)));
-        }
+        setNotes(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Note)));
       }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${user.uid}/notes`))
     );
 
     unsubs.push(
       onSnapshot(doc(db, `users/${user.uid}/analytics/main`), (snapshot) => {
-        if (!isWipedAll) {
-          setDoc(doc(db, `users/${user.uid}/analytics/main`), { focusTimeMinutes: 0 }, { merge: true }).catch(() => {});
-          setFocusTimeMinutes(0);
+        if (snapshot.exists()) {
+          setFocusTimeMinutes(snapshot.data().focusTimeMinutes || 0);
         } else {
-          if (snapshot.exists()) {
-            setFocusTimeMinutes(snapshot.data().focusTimeMinutes || 0);
-          } else {
-            setDoc(doc(db, `users/${user.uid}/analytics/main`), { focusTimeMinutes: 0 }, { merge: true });
-            setFocusTimeMinutes(0);
-          }
+          setDoc(doc(db, `users/${user.uid}/analytics/main`), { focusTimeMinutes: 0 }, { merge: true });
+          setFocusTimeMinutes(0);
         }
       }, (err) => handleFirestoreError(err, OperationType.GET, `users/${user.uid}/analytics/main`))
     );
-
-    if (!isWipedAll) {
-      localStorage.setItem(`timeflow_complete_wipe_v10_${user.uid}`, 'true');
-    }
 
     return () => unsubs.forEach(fn => fn());
   }, [user]);
