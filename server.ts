@@ -5,10 +5,12 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 import webPush, { PushSubscription } from "web-push";
+import compression from "compression";
 
 dotenv.config();
 
 const app = express();
+app.use(compression());
 const PORT = Number(process.env.PORT) || 3000;
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
@@ -532,7 +534,18 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      maxAge: '1d',
+      setHeaders: (res, filepath) => {
+        // Assets containing content hashes can be cached forever in the browser
+        if (filepath.includes(path.join('dist', 'assets')) || filepath.includes('assets/')) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else if (filepath.endsWith('.webmanifest') || filepath.endsWith('.json') || filepath.endsWith('sw.js')) {
+          // Keep service worker and metadata manifest fresh
+          res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+        }
+      }
+    }));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });

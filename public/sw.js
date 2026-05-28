@@ -75,8 +75,22 @@ self.addEventListener('fetch', (event) => {
         return cachedResponse;
       }
 
-      // Fallback to live network fetch
-      return fetch(request);
+      // Fallback to live network fetch, and cache static assets dynamically
+      return fetch(request).then((networkResponse) => {
+        if (
+          networkResponse && 
+          networkResponse.status === 200 && 
+          (request.url.includes('/assets/') || 
+           request.url.endsWith('.png') || 
+           request.url.endsWith('.jpg') || 
+           request.url.endsWith('.svg') || 
+           request.url.endsWith('.woff2'))
+        ) {
+          const copy = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        }
+        return networkResponse;
+      });
     })
   );
 });
