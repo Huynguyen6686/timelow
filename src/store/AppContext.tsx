@@ -593,21 +593,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const calculateStreak = (dates: string[]) => {
     if (!dates.length) return 0;
-    const sorted = [...new Set(dates)].sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    const sorted = [...new Set(dates)].sort((a, b) => new Date(b.replace(/-/g, '/')).getTime() - new Date(a.replace(/-/g, '/')).getTime());
     let currentStreak = 1;
-    let checkDate = new Date(sorted[0]);
+    let checkDate = new Date(sorted[0].replace(/-/g, '/'));
     checkDate.setHours(0,0,0,0);
     const today = new Date();
     today.setHours(0,0,0,0);
     const diffTime = Math.abs(today.getTime() - checkDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)); 
     if (diffDays > 1) return 0;
 
     for (let i = 1; i < sorted.length; i++) {
-        const prevDate = new Date(sorted[i-1]);
-        const currDate = new Date(sorted[i]);
+        const prevDate = new Date(sorted[i-1].replace(/-/g, '/'));
+        const currDate = new Date(sorted[i].replace(/-/g, '/'));
         const diff = Math.abs(prevDate.getTime() - currDate.getTime());
-        const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        const days = Math.round(diff / (1000 * 60 * 60 * 24));
         if (days === 1) {
             currentStreak++;
         } else {

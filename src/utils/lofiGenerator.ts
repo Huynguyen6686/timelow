@@ -17,6 +17,7 @@ class LofiGenerator {
   private chordsInterval: number | null = null;
   private activeNotes: { oscs: OscillatorNode[]; gain: GainNode }[] = [];
   private isGenerating = false;
+  private cleanupTimeoutId: number | null = null;
 
   constructor() {}
 
@@ -30,6 +31,10 @@ class LofiGenerator {
   }
 
   public start() {
+    if (this.cleanupTimeoutId) {
+      clearTimeout(this.cleanupTimeoutId);
+      this.cleanupTimeoutId = null;
+    }
     if (this.isGenerating) return;
     try {
       this.initCtx();
@@ -183,6 +188,10 @@ class LofiGenerator {
     if (!this.isGenerating) return;
     this.isGenerating = false;
 
+    if (this.cleanupTimeoutId) {
+      clearTimeout(this.cleanupTimeoutId);
+    }
+
     const ctx = this.ctx;
     if (ctx && this.primaryGain) {
       const now = ctx.currentTime;
@@ -196,9 +205,10 @@ class LofiGenerator {
     }
 
     // Delayed absolute cut-off of active audio nodes to support smooth fade-out
-    setTimeout(() => {
+    this.cleanupTimeoutId = window.setTimeout(() => {
       this.cleanupNodes();
-    }, 900);
+      this.cleanupTimeoutId = null;
+    }, 900) as any;
   }
 
   private cleanupNodes() {
