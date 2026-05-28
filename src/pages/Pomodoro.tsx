@@ -83,8 +83,40 @@ export default function Pomodoro() {
     };
   }, [isActive, timeLeft]);
 
+  const playCompletionSound = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      const playTone = (freq: number, start: number, duration: number) => {
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, start);
+
+        gainNode.gain.setValueAtTime(0, start);
+        gainNode.gain.linearRampToValueAtTime(0.12, start + 0.05);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+        osc.start(start);
+        osc.stop(start + duration);
+      };
+
+      const now = audioCtx.currentTime;
+      playTone(523.25, now, 0.8);      // C5
+      playTone(659.25, now + 0.15, 0.8); // E5
+      playTone(783.99, now + 0.3, 0.8);  // G5
+      playTone(1046.50, now + 0.45, 1.5); // C6
+    } catch (e) {
+      console.warn("Chime sound blocked by browser policy:", e);
+    }
+  };
+
   const handleComplete = () => {
     setIsActive(false);
+    playCompletionSound();
     if (mode === 'Focus') {
       addFocusTime(focusDuration);
       if (activeTask) {

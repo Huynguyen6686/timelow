@@ -48,11 +48,37 @@ export default function Habits() {
     setIsAddOpen(false);
   };
 
+  const playDopamineDing = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const now = audioCtx.currentTime;
+      
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      osc.type = 'triangle'; // Retro, warm tone
+      osc.frequency.setValueAtTime(587.33, now); // D5
+      osc.frequency.exponentialRampToValueAtTime(1174.66, now + 0.15); // slide to D6
+      
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.08, now + 0.05);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+      
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } catch (e) {
+      console.warn("Audio dopamine ding blocked:", e);
+    }
+  };
+
   const toggleCheckIn = (habitId: string, dateStr: string, isCompleted: boolean) => {
       if (isCompleted) {
           removeHabitCheckIn(habitId, dateStr);
       } else {
           checkInHabit(habitId, dateStr);
+          playDopamineDing();
       }
   };
 

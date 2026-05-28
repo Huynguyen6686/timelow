@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { BottomNav } from './BottomNav';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAppContext } from '../store/AppContext';
 import { Button } from '@/components/ui/button';
 import { LogOut, Calendar, Play, Sun, Moon, Bell, AlertTriangle, AlertCircle, Volume2, Clock, Smartphone, Share2, Info, Cloud, CloudOff, Loader2 } from 'lucide-react';
@@ -8,7 +9,7 @@ import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { GlowEffect } from './GlowEffect';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import DeadlinePushManager from './DeadlinePushManager';
 
 const AIAssistant = lazy(() => import('./AIAssistant'));
@@ -20,6 +21,18 @@ export default function Layout() {
   const location = useLocation();
   const [isNotifyOpen, setIsNotifyOpen] = useState(false);
   const [isAppInstallOpen, setIsAppInstallOpen] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
 
   if (loading) {
@@ -147,7 +160,14 @@ export default function Layout() {
               <AvatarFallback className="bg-gradient-to-br from-primary to-primary-foreground font-bold text-emerald-950">{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <h1 className="text-lg font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-foreground to-foreground/60 uppercase leading-none mt-1" style={{ textShadow: '0 2px 10px rgba(255,255,255,0.1)' }}>Timeflow</h1>
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-lg font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-foreground to-foreground/60 uppercase leading-none mt-1" style={{ textShadow: '0 2px 10px rgba(255,255,255,0.1)' }}>Timeflow</h1>
+                {isOffline && (
+                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[8px] font-black uppercase tracking-wider animate-pulse shadow-sm mt-0.5">
+                    <CloudOff className="w-2.5 h-2.5" /> Offline
+                  </span>
+                )}
+              </div>
               {isDashboard && (
                 <span className="text-[10px] text-muted-foreground capitalize mt-1 font-medium drop-shadow-sm">
                   {format(new Date(), 'EEEE, d MMMM', { locale: vi })}
@@ -369,8 +389,19 @@ export default function Layout() {
           </div>
         </header>
         <main className="pt-6 pb-[120px] md:p-6 md:pb-[120px] flex-1 min-h-0 overflow-x-hidden overflow-y-auto hide-scrollbar bg-gradient-to-b from-background via-background to-background/50 relative flex flex-col">
-          <div className="px-4 flex-1">
-            <Outlet />
+          <div className="px-4 flex-1 relative flex flex-col">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.18, ease: "easeInOut" }}
+                className="flex-1 flex flex-col"
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
           </div>
         </main>
         <div id="floating-actions-container" className="absolute bottom-[110px] right-6 z-[45]"></div>
