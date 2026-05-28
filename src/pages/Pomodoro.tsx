@@ -37,8 +37,10 @@ export default function Pomodoro() {
     }
   };
   
-  // Audio ref for notification
+  // Precise background-safe timer states
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const endTimeRef = useRef<number | null>(null);
+  const expectedNextTickRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (activeTask) {
@@ -52,12 +54,30 @@ export default function Pomodoro() {
 
   useEffect(() => {
     if (isActive && timeLeft > 0) {
+      // If we don't have a target end time, or if timeLeft changed from outside (e.g. manual reset)
+      if (!endTimeRef.current || timeLeft !== expectedNextTickRef.current) {
+        endTimeRef.current = Date.now() + timeLeft * 1000;
+      }
+
       timerRef.current = setTimeout(() => {
-        setTimeLeft(timeLeft - 1);
+        const remaining = Math.max(0, Math.ceil((endTimeRef.current! - Date.now()) / 1000));
+        expectedNextTickRef.current = remaining;
+        setTimeLeft(remaining);
+        
+        if (remaining === 0) {
+          endTimeRef.current = null;
+          expectedNextTickRef.current = null;
+          handleComplete();
+        }
       }, 1000);
-    } else if (timeLeft === 0) {
-      handleComplete();
+    } else {
+      endTimeRef.current = null;
+      expectedNextTickRef.current = null;
+      if (timeLeft === 0) {
+        handleComplete();
+      }
     }
+
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };

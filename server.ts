@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "node:fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
@@ -30,6 +31,72 @@ type PushReminder = {
 
 const pushSubscriptions = new Map<string, PushSubscription>();
 const scheduledReminderTimers = new Map<string, NodeJS.Timeout>();
+
+// --- Persistent Push Store (Local JSON Database) ---
+const PUSH_STORE_PATH = path.join(process.cwd(), "push_store.json");
+
+interface PersistedData {
+  subscriptions: Record<string, any>;
+  reminders: Array<{ userId: string; reminder: any }>;
+}
+
+function loadPushStore(): PersistedData {
+  try {
+    if (fs.existsSync(PUSH_STORE_PATH)) {
+      const raw = fs.readFileSync(PUSH_STORE_PATH, "utf8");
+      return JSON.parse(raw);
+    }
+  } catch (err) {
+    console.error("Failed to load push store:", err);
+  }
+  return { subscriptions: {}, reminders: [] };
+}
+
+function savePushStore(data: PersistedData) {
+  try {
+    fs.writeFileSync(PUSH_STORE_PATH, JSON.stringify(data, null, 2), "utf8");
+  } catch (err) {
+    console.error("Failed to save push store:", err);
+  }
+}
+
+// --- Simple Prompt Cache for Gemini API ---
+type CacheEntry<T> = {
+  data: T;
+  expiry: number;
+};
+
+class SimpleCache {
+  private store = new Map<string, CacheEntry<any>>();
+  private maxAgeMs: number;
+
+  constructor(maxAgeMinutes = 15) {
+    this.maxAgeMs = maxAgeMinutes * 60 * 1000;
+  }
+
+  get<T>(key: string): T | null {
+    const entry = this.store.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.expiry) {
+      this.store.delete(key);
+      return null;
+    }
+    return entry.data;
+  }
+
+  set(key: string, data: any) {
+    this.store.set(key, {
+      data,
+      expiry: Date.now() + this.maxAgeMs
+    });
+  }
+
+  clear() {
+    this.store.clear();
+  }
+}
+
+const aiCache = new SimpleCache(15); // Cache prompts for 15 minutes
 
 function schedulePushReminder(userId: string, reminder: PushReminder) {
   const timerKey = `${userId}:${reminder.taskId}`;
@@ -106,6 +173,12 @@ app.post("/api/push/subscribe", (req, res) => {
   }
 
   pushSubscriptions.set(String(userId), subscription);
+
+  // Persist push subscription to local store
+  const store = loadPushStore();
+  store.subscriptions[String(userId)] = subscription;
+  savePushStore(store);
+
   res.json({ ok: true });
 });
 
@@ -122,15 +195,26 @@ app.post("/api/push/schedule", (req, res) => {
     }
   }
 
-  reminders
-    .filter((reminder: PushReminder) => (
-      reminder &&
-      typeof reminder.taskId === "string" &&
-      typeof reminder.title === "string" &&
-      typeof reminder.deadline === "number" &&
-      typeof reminder.reminderTime === "number"
-    ))
-    .forEach((reminder: PushReminder) => schedulePushReminder(String(userId), reminder));
+  const validReminders = reminders.filter((reminder: PushReminder) => (
+    reminder &&
+    typeof reminder.taskId === "string" &&
+    typeof reminder.title === "string" &&
+    typeof reminder.deadline === "number" &&
+    typeof reminder.reminderTime === "number"
+  ));
+
+  // Persist reminders in local JSON store
+  const store = loadPushStore();
+  // Filter out any old reminders for this specific user
+  store.reminders = store.reminders.filter((r) => r.userId !== String(userId));
+  // Append new ones
+  validReminders.forEach((reminder: PushReminder) => {
+    store.reminders.push({ userId: String(userId), reminder });
+  });
+  savePushStore(store);
+
+  // Schedule timers
+  validReminders.forEach((reminder: PushReminder) => schedulePushReminder(String(userId), reminder));
 
   res.json({ ok: true, scheduled: scheduledReminderTimers.size });
 });
@@ -139,6 +223,12 @@ app.post("/api/push/schedule", (req, res) => {
 app.post("/api/ai/coach", async (req, res) => {
   try {
     const { tasks, habits, goals, focusTimeMinutes, language } = req.body;
+
+    const cacheKey = `coach:${language}:${focusTimeMinutes}:${JSON.stringify(tasks || [])}:${JSON.stringify(habits || [])}:${JSON.stringify(goals || [])}`;
+    const cachedData = aiCache.get<{ feedback: string }>(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
     
     // Construct context summary
     let systemPrompt = "Bạn là Timeflow Coach, một chuyên gia cố vấn năng suất thông thái, tâm lý và súc tích. Bạn truyền cảm hứng, viết bằng Tiếng Việt súc tích, chuyên nghiệp.";
@@ -171,7 +261,9 @@ Hãy chia nhỏ cấu trúc bản tin bằng các gạch đầu dòng rõ ràng:
       }
     });
 
-    res.json({ feedback: response.text });
+    const result = { feedback: response.text };
+    aiCache.set(cacheKey, result);
+    res.json(result);
   } catch (error: any) {
     console.error("AI Coach Error:", error);
     res.status(500).json({ error: error?.message || "Internal server error" });
@@ -184,6 +276,12 @@ app.post("/api/ai/quickadd", async (req, res) => {
     const { prompt } = req.body;
     if (!prompt) {
       return res.status(400).json({ error: "Prompt is required" });
+    }
+
+    const cacheKey = `quickadd:${prompt}`;
+    const cachedData = aiCache.get<any>(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
     }
 
     const systemPrompt = `Bạn là trợ lý đắc lực giúp bóc tách các đầu việc thô của người dùng thành danh sách các task có cấu trúc. Phân tích ngữ nghĩa thời gian để đề xuất deadline tương đối tính bằng giờ phát sinh từ thời điểm NGAY BÂY GIỜ. Trả về đúng định dạng JSON được yêu cầu. Không giải thích gì thêm ngoài JSON.`;
@@ -221,6 +319,7 @@ app.post("/api/ai/quickadd", async (req, res) => {
 
     const text = response.text || "{}";
     const data = JSON.parse(text);
+    aiCache.set(cacheKey, data);
     res.json(data);
   } catch (error: any) {
     console.error("AI QuickAdd Error:", error);
@@ -234,6 +333,12 @@ app.post("/api/ai/breakdown", async (req, res) => {
     const { taskTitle, taskDescription } = req.body;
     if (!taskTitle) {
       return res.status(400).json({ error: "Task title is required" });
+    }
+
+    const cacheKey = `breakdown:${taskTitle}:${taskDescription || ""}`;
+    const cachedData = aiCache.get<any>(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
     }
 
     const systemPrompt = `Bạn là chuyên gia phân rã công việc. Hãy chia nhỏ mọi ý tưởng hoặc nhiệm vụ lớn thành 3 đến 5 bước con (subtasks) khả thi, súc tích, thực hiện được ngay.`;
@@ -260,6 +365,7 @@ app.post("/api/ai/breakdown", async (req, res) => {
 
     const text = response.text || "{}";
     const data = JSON.parse(text);
+    aiCache.set(cacheKey, data);
     res.json(data);
   } catch (error: any) {
     console.error("AI Breakdown Error:", error);
@@ -307,6 +413,12 @@ app.post("/api/ai/task-insights", async (req, res) => {
     const { tasks, language } = req.body;
     if (!tasks || !Array.isArray(tasks)) {
       return res.status(400).json({ error: "Tasks list is required" });
+    }
+
+    const cacheKey = `task-insights:${language}:${JSON.stringify(tasks)}`;
+    const cachedData = aiCache.get<any>(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
     }
 
     const systemPrompt = `Bạn là Timeflow Architect - Chuyên gia phân tích mối liên kết, sự lệ thuộc (dependencies) và lộ trình tối ưu hóa công việc. 
@@ -376,7 +488,9 @@ Phần analysis viết bằng ${language === 'vi' ? 'Tiếng Việt' : 'English'
     });
 
     const text = response.text || "{}";
-    res.json(JSON.parse(text));
+    const data = JSON.parse(text);
+    aiCache.set(cacheKey, data);
+    res.json(data);
   } catch (error: any) {
     console.error("AI Task Insights Error:", error);
     res.status(500).json({ error: error?.message || "Internal server error" });
@@ -385,6 +499,31 @@ Phần analysis viết bằng ${language === 'vi' ? 'Tiếng Việt' : 'English'
 
 // Setup Vite Dev server or Serve build static directory depending on NODE_ENV
 async function startServer() {
+  // Load persisted push subscriptions and schedule active reminders on startup
+  const store = loadPushStore();
+  
+  // Restore subscriptions to in-memory map
+  for (const [userId, sub] of Object.entries(store.subscriptions)) {
+    pushSubscriptions.set(userId, sub);
+  }
+
+  const now = Date.now();
+  // Filter active (future) reminders and clean up expired ones
+  const activeReminders = store.reminders.filter((item) => item.reminder.reminderTime > now);
+  store.reminders = activeReminders;
+  savePushStore(store);
+
+  // Reschedule timers
+  let restoredCount = 0;
+  activeReminders.forEach((item) => {
+    schedulePushReminder(item.userId, item.reminder);
+    restoredCount++;
+  });
+
+  if (restoredCount > 0) {
+    console.log(`[Push Server] Restored ${restoredCount} active push reminder timers.`);
+  }
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
