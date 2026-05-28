@@ -915,8 +915,9 @@ export default function Tasks() {
                   <div className="space-y-3 pt-3 border-t border-white/5 animate-in slide-in-from-top-2 duration-200 text-left">
                     <div className="space-y-1.5">
                       <Label className="text-[10px] text-muted-foreground font-bold tracking-wide uppercase">Thời gian báo trước</Label>
-                      <div className="grid grid-cols-4 gap-1.5 font-sans">
+                      <div className="grid grid-cols-5 gap-1 font-sans">
                         {[
+                          { value: "0", label: "Đúng giờ" },
                           { value: "5", label: "5 phút" },
                           { value: "15", label: "15 phút" },
                           { value: "30", label: "30 phút" },
